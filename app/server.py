@@ -47,9 +47,9 @@ def index():
 			}
 		}, 500)
 
+print('FAKE NEWS CLASSIFIER')
+print('initializing model')
+model.initialize('data.csv')
 if __name__ == '__main__':
-	print('FAKE NEWS CLASSIFIER')
-	print('initializing model')
-	model.initialize('data.csv')
 	print('running flask')
 	app.run(threaded=True, port=8000)
