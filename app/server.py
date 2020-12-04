@@ -50,6 +50,7 @@ def index():
 			}
 		}, 500)
 
+# main
 print('FAKE NEWS CLASSIFIER')
 print('initializing model')
 model.initialize('data.csv')
