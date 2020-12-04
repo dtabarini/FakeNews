@@ -1,15 +1,18 @@
 # server.py
 
 from model import Model
-from flask import Flask, request, jsonify, send_file, make_response
+from flask import Flask, request, jsonify, send_file, make_response, render_template
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', 
+            static_folder='static',
+            template_folder='templates')
 model = Model()
 
 # json
 def json_response(obj, code = 200):
 	response = make_response(jsonify(obj), code)
 	response.headers["Content-Type"] = "application/json"
+	print(response)
 	return response
 
 # model
@@ -38,7 +41,7 @@ def run_model():
 @app.route('/')
 def index():
 	try:
-		return send_file('index.html')
+		return render_template('index.html')
 	except Exception as e:
 		return json_response({
 			"status": False,
