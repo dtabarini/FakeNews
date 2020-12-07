@@ -4,6 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Fake News Classifier</title>
+        <link rel="icon" href="icon.png" type="image/png" />
         <link
             rel="stylesheet"
             href="{{ url_for('static', filename='main.css') }}"
@@ -14,10 +15,7 @@
             crossorigin="anonymous"
         ></script>
         <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-
         <script>
-            //var link = url_for('static', filename="particelsjs-config.json");
-            //console.log(link);
             particlesJS.load(
                 'particles-js',
                 "{{ url_for('static', filename='particles.json') }}",
@@ -33,44 +31,49 @@
                     var title = `${$('#title').val()}`.trim();
                     var text = `${$('#text').val()}`.trim();
                     if (title != '' && text != '') {
-                        $.ajax({
-                            url: 'model',
-                            method: 'post',
-                            dataType: 'json',
-                            data: {
-                                title: title,
-                                text: text,
-                            },
-                            error: (xhr, status, error) => {
-                                console.log(status);
-                                console.log(xhr.responseJSON);
-                                console.error(error);
-                                $('#output').html(status);
-                            },
-                            success: (response, status, xhr) => {
-                                console.log(status);
-                                console.log(response);
-                                if (response) {
-                                    if (response.status) {
-                                        var output = `${response.data.prediction}`;
-                                        console.log(output);
-                                        if (output == 'REAL') {
-                                            $('#output')
-                                                .html(output)
-                                                .css('color', '#06E576');
+                        $('#output').html(
+                            `<img id="loading" src="loading.svg" />`
+                        );
+                        setTimeout((_) => {
+                            $.ajax({
+                                url: 'model',
+                                method: 'post',
+                                dataType: 'json',
+                                data: {
+                                    title: title,
+                                    text: text,
+                                },
+                                error: (xhr, status, error) => {
+                                    console.log(status);
+                                    console.log(xhr.responseJSON);
+                                    console.error(error);
+                                    $('#output').html(status);
+                                },
+                                success: (response, status, xhr) => {
+                                    console.log(status);
+                                    console.log(response);
+                                    if (response) {
+                                        if (response.status) {
+                                            var output = `${response.data.prediction}`;
+                                            console.log(output);
+                                            if (output == 'REAL') {
+                                                $('#output')
+                                                    .html(output)
+                                                    .css('color', '#06E576');
+                                            } else {
+                                                $('#output')
+                                                    .html(output)
+                                                    .css('color', '#F34336');
+                                            }
                                         } else {
-                                            $('#output')
-                                                .html(output)
-                                                .css('color', '#F34336');
+                                            $('#output').html(
+                                                `error: ${response.data.message}`
+                                            );
                                         }
-                                    } else {
-                                        $('#output').html(
-                                            `error: ${response.data.message}`
-                                        );
-                                    }
-                                } else $('#output').html('no response');
-                            },
-                        });
+                                    } else $('#output').html('no response');
+                                },
+                            });
+                        }, 500);
                     }
                 });
             });
@@ -92,7 +95,9 @@
                 placeholder="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
             ></textarea>
             <br />
-            <button id="submit">Predict</button>
+            <button id="submit">
+                <span>PREDICT</span>
+            </button>
             <br /><br />
             <div class="spacer"></div>
             <div id="output"></div>
