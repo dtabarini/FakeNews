@@ -18,17 +18,9 @@ def json_response(obj, code = 200):
 # model
 @app.route('/model', methods=['POST'])
 def run_model():
+	title = request.form.get('title')
+	text = request.form.get('text')
 	try:
-		title = request.form.get('title')
-		text = request.form.get('text')
-		if text == "":
-			return json_response({
-				"status": False,
-				"data": {
-					"message": "missing parameter: text"
-				}
-			}, 400)
-		text = model.preprocess_text(text)
 		prediction = model.predict(title, text)
 		return json_response({
 			"status": True,
@@ -60,8 +52,8 @@ def index():
 
 # main
 print('FAKE NEWS CLASSIFIER')
-print('training model')
-model.train('data.csv')
+print('initializing model')
+model.initialize('data.csv')
 if __name__ == '__main__':
 	print('running flask')
 	app.run(threaded=True, port=8000)
