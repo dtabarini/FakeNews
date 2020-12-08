@@ -4,7 +4,11 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Fake News Classifier</title>
-        <link rel="icon" href="icon.png" type="image/png" />
+        <link
+            rel="icon"
+            href="{{ url_for('static', filename='icon.png') }}"
+            type="image/png"
+        />
         <link
             rel="stylesheet"
             href="{{ url_for('static', filename='main.css') }}"
@@ -15,7 +19,7 @@
             crossorigin="anonymous"
         ></script>
         <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-        <script>
+        <script type="text/javascript">
             particlesJS.load(
                 'particles-js',
                 "{{ url_for('static', filename='particles.json') }}",
@@ -24,60 +28,7 @@
                 }
             );
         </script>
-
-        <script>
-            $(document).ready((_) => {
-                $('#submit').click((e) => {
-                    var title = `${$('#title').val()}`.trim();
-                    var text = `${$('#text').val()}`.trim();
-                    if (title != '' && text != '') {
-                        $('#output').html(
-                            `<img id="loading" src="loading.svg" />`
-                        );
-                        setTimeout((_) => {
-                            $.ajax({
-                                url: 'model',
-                                method: 'post',
-                                dataType: 'json',
-                                data: {
-                                    title: title,
-                                    text: text,
-                                },
-                                error: (xhr, status, error) => {
-                                    console.log(status);
-                                    console.log(xhr.responseJSON);
-                                    console.error(error);
-                                    $('#output').html(status);
-                                },
-                                success: (response, status, xhr) => {
-                                    console.log(status);
-                                    console.log(response);
-                                    if (response) {
-                                        if (response.status) {
-                                            var output = `${response.data.prediction}`;
-                                            console.log(output);
-                                            if (output == 'REAL') {
-                                                $('#output')
-                                                    .html(output)
-                                                    .css('color', '#06E576');
-                                            } else {
-                                                $('#output')
-                                                    .html(output)
-                                                    .css('color', '#F34336');
-                                            }
-                                        } else {
-                                            $('#output').html(
-                                                `error: ${response.data.message}`
-                                            );
-                                        }
-                                    } else $('#output').html('no response');
-                                },
-                            });
-                        }, 500);
-                    }
-                });
-            });
-        </script>
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
     </head>
 
     <body>
@@ -94,6 +45,11 @@
                 id="text"
                 placeholder="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
             ></textarea>
+            <br />
+            <select id="model">
+                <option value="logreg">LogisticRegressor (Better Score)</option>
+                <option value="linsvc">LinearSVC (More Consistent)</option>
+            </select>
             <br />
             <button id="submit">
                 <span>PREDICT</span>
