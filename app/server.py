@@ -28,7 +28,7 @@ def succeed_response(data, code = 200):
 
 # model
 @app.route('/model', methods=['POST'])
-def run_model():
+def model_predict():
 	try:
 		title = request.form.get('title')
 		text = request.form.get('text')
@@ -39,7 +39,6 @@ def run_model():
 			return fail_response("missing parameter: title", 400)
 		if model_type == "" or model_type == None:
 			return fail_response("missing parameter: model_type", 400)
-		text = model.preprocess_text(text)
 		prediction = model.predict(title, text, model_type)
 		return succeed_response({
 			"title": title,
@@ -49,7 +48,30 @@ def run_model():
 	except Exception as e:
 		print(e)
 		return fail_response(str(e))
-
+@app.route('/model/bert', methods=['GET', 'POST'])
+def model_bert():
+	if request.method == 'POST':
+		try:
+			action = request.form.get('action')
+			if action == "" or action == None:
+				return fail_response("missing parameter: action", 400)
+			if action == "init":
+				model.bert_init()
+				return succeed_response({ "message": "BERT initialized", "bert_status": model.bert_status })
+			elif action == "load":
+				model.bert_load("bert/model")
+				return succeed_response({ "message": "BERT loaded", "bert_status": model.bert_status })
+			elif action == "train":
+				return succeed_response({ "message": "BERT trained", "bert_status": model.bert_status })
+		except Exception as e:
+			print(e)
+			return fail_response(str(e))
+	else:
+		try:
+			return render_template('bert.html', bert_status=model.bert_status)
+		except Exception as e:
+			print(e)
+			return fail_response(str(e))
 # index
 @app.route('/')
 def index():
@@ -62,7 +84,7 @@ def index():
 # main
 print('FAKE NEWS CLASSIFIER')
 print('training model')
-model.train('alldata.csv')
+model.train('data/alldata.csv')
 if __name__ == '__main__':
 	print('running flask')
 	app.run(threaded=True, port=8010)

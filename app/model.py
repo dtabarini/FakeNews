@@ -6,10 +6,17 @@ import itertools
 import statistics
 import numpy as np
 import pandas as pd
+import tensorflow as tf
+import tensorflow_hub as hub
+import bert.tokenization as tokenization
 from numpy import var, std
 from statistics import mean
 from sklearn.svm import LinearSVC
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, Input
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.models import Model, model_from_json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
 from sklearn.linear_model import PassiveAggressiveClassifier, LogisticRegression
@@ -38,18 +45,89 @@ class ModelV2:
         # aucScore, stdDev, scoresArray = self.get_cv_score(self.classifier_linsvc, x_df, labels, iterations=5, get_details=True)
         # conf_matrix = self.get_confusion_matrix(self.classifier_linsvc, x_df, labels)
 
-    def predict(self, title, text, model):
-        x_test = pd.Series(data=[text], index=[0])
-        tfidf_test = self.tfidf.transform(x_test)
-        classifier = None
-        if model == "logreg":
-            classifier = self.classifier_logreg
-        elif model == "linsvc":
-            classifier = self.classifier_linsvc
+    bert_df = None
+    bert_layer = None
+    bert_tokenizer = None
+    bert_model = None
+    bert_status = 0
+
+    def bert_init(self):
+        if self.bert_status != 0:
+            raise ValueError("BERT not uninitialized")
+            return False
+        bert_module = "https://tfhub.dev/tensorflow/bert_en_uncased_L-24_H-1024_A-16/1"
+        self.bert_layer = hub.KerasLayer(bert_module, trainable=True)
+        vocab_file = self.bert_layer.resolved_object.vocab_file.asset_path.numpy()
+        do_lower_case = self.bert_layer.resolved_object.do_lower_case.numpy()
+        self.bert_tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
+        self.bert_status = 1
+
+    def bert_load(self, src):
+        if self.bert_status != 1:
+            raise ValueError("BERT not initialized")
+            return False
+        json_file = open('bert/model.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        loaded_model = model_from_json(loaded_model_json, custom_objects={'KerasLayer': hub.KerasLayer})
+        loaded_model.load_weights("bert/model.h5")
+        self.bert_model = loaded_model
+        self.bert_status = 2
+
+    def bert_train(self, src, output=True):
+        if self.bert_status != 1:
+            raise ValueError("BERT not initialized")
+            return False
+        self.bert_df = pd.read_csv(src)
+        df_test = self.bert_df[-2000:]
+        df_train = self.bert_df[:-2000]
+        df_fake = df_train[df_train['label'] == 'fake']
+        df_real = df_train[df_train['label'] == 'real']
+        df_real = df_real.sample(n=7740, random_state=SEED)
+        df_balanced = df_real.append(df_fake)
+        df_balanced = df_balanced.sample(frac=1, random_state=SEED).reset_index(drop=True)
+        df_balanced.label = df_balanced.label.replace({'real': 0, 'fake': 1})
+        train_input = self.bert_encode(df_balanced.statement.values, self.bert_tokenizer)
+        train_labels = df_balanced.label.values
+        self.bert_model = self.build_model(bert_layer)
+        train_history = self.bert_model.fit(
+            train_input, train_labels,
+            validation_split=0.2,
+            epochs=2, batch_size=5
+        )
+        if output:
+            # output model json
+            model_json = self.bert_model.to_json()
+            with open("bert/model.json", "w") as json_file:
+                json_file.write(model_json)
+            # serialize weights to HDF5
+            self.bert_model.save_weights("bert/model.h5")
+        self.bert_status = 2
+
+    def predict(self, title, text, model_type):
+        model = None
+        test_data = None
+        prediction = None
+        if model_type == "bert":
+            if self.bert_status != 2:
+                raise ValueError("BERT not loaded or trained")
+                return None
+            model = self.bert_model
+            test_data = self.bert_encode([title], self.bert_tokenizer)
+            prediction = model.predict(test_data)
+            prediction = "fake" if (prediction[0][0] > 0.5) else "real"
         else:
-            raise ValueError("missing argument: model")
-        prediction = classifier.predict(tfidf_test)
-        prediction = prediction[0]
+            if model_type == "logreg":
+                model = self.classifier_logreg
+            elif model_type == "linsvc":
+                model = self.classifier_linsvc
+            else:
+                raise ValueError("invalid argument: model_type")
+                return None
+            x_test = pd.Series(data=[self.preprocess_text(text)], index=[0])
+            test_data = self.tfidf.transform(x_test)
+            prediction = model.predict(test_data)
+            prediction = prediction[0]
         return prediction
 
 
@@ -135,6 +213,45 @@ class ModelV2:
         # Visualize the confusion matrix to gain insight into false postives and negatives
         predictions = model.predict(tfidf_test)
         return confusion_matrix(y_test1, predictions, labels=['fake','real'])
+
+    # BERT helper function for encoding input texts
+    def bert_encode(self, texts, tokenizer, max_len=512):
+        all_tokens = []
+        all_masks = []
+        all_segments = []
+        
+        for text in texts:
+            text = tokenizer.tokenize(text)
+                
+            text = text[:max_len-2]
+            input_sequence = ["[CLS]"] + text + ["[SEP]"]
+            pad_len = max_len - len(input_sequence)
+            
+            tokens = tokenizer.convert_tokens_to_ids(input_sequence)
+            tokens += [0] * pad_len
+            pad_masks = [1] * len(input_sequence) + [0] * pad_len
+            segment_ids = [0] * max_len
+            
+            all_tokens.append(tokens)
+            all_masks.append(pad_masks)
+            all_segments.append(segment_ids)
+        
+        return np.array(all_tokens), np.array(all_masks), np.array(all_segments)
+
+    # BERT helper function for making the NN
+    def build_model(self, bert_layer, max_len=512):
+        input_word_ids = Input(shape=(max_len,), dtype=tf.int32, name="input_word_ids")
+        input_mask = Input(shape=(max_len,), dtype=tf.int32, name="input_mask")
+        segment_ids = Input(shape=(max_len,), dtype=tf.int32, name="segment_ids")
+
+        _, sequence_output = bert_layer([input_word_ids, input_mask, segment_ids])
+        clf_output = sequence_output[:, 0, :]
+        out = Dense(1, activation='sigmoid')(clf_output)
+        
+        model = Model(inputs=[input_word_ids, input_mask, segment_ids], outputs=out)
+        model.compile(Adam(lr=2e-6), loss='binary_crossentropy', metrics=['accuracy'])
+        
+        return model
 
 
 
