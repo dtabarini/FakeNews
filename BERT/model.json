@@ -1,0 +1,126 @@
+{
+    "class_name": "Functional",
+    "config": {
+        "name": "functional_1",
+        "layers": [
+            {
+                "class_name": "InputLayer",
+                "config": {
+                    "batch_input_shape": [null, 512],
+                    "dtype": "int32",
+                    "sparse": false,
+                    "ragged": false,
+                    "name": "input_word_ids"
+                },
+                "name": "input_word_ids",
+                "inbound_nodes": []
+            },
+            {
+                "class_name": "InputLayer",
+                "config": {
+                    "batch_input_shape": [null, 512],
+                    "dtype": "int32",
+                    "sparse": false,
+                    "ragged": false,
+                    "name": "input_mask"
+                },
+                "name": "input_mask",
+                "inbound_nodes": []
+            },
+            {
+                "class_name": "InputLayer",
+                "config": {
+                    "batch_input_shape": [null, 512],
+                    "dtype": "int32",
+                    "sparse": false,
+                    "ragged": false,
+                    "name": "segment_ids"
+                },
+                "name": "segment_ids",
+                "inbound_nodes": []
+            },
+            {
+                "class_name": "KerasLayer",
+                "config": {
+                    "name": "keras_layer",
+                    "trainable": true,
+                    "dtype": "float32",
+                    "handle": "https://tfhub.dev/tensorflow/bert_en_uncased_L-24_H-1024_A-16/1"
+                },
+                "name": "keras_layer",
+                "inbound_nodes": [
+                    [
+                        ["input_word_ids", 0, 0, {}],
+                        ["input_mask", 0, 0, {}],
+                        ["segment_ids", 0, 0, {}]
+                    ]
+                ]
+            },
+            {
+                "class_name": "TensorFlowOpLayer",
+                "config": {
+                    "name": "strided_slice",
+                    "trainable": true,
+                    "dtype": "float32",
+                    "node_def": {
+                        "name": "strided_slice",
+                        "op": "StridedSlice",
+                        "input": [
+                            "keras_layer/cond/Identity_1",
+                            "strided_slice/begin",
+                            "strided_slice/end",
+                            "strided_slice/strides"
+                        ],
+                        "attr": {
+                            "shrink_axis_mask": { "i": "2" },
+                            "ellipsis_mask": { "i": "0" },
+                            "begin_mask": { "i": "5" },
+                            "new_axis_mask": { "i": "0" },
+                            "end_mask": { "i": "5" },
+                            "Index": { "type": "DT_INT32" },
+                            "T": { "type": "DT_FLOAT" }
+                        }
+                    },
+                    "constants": {
+                        "1": [0, 0, 0],
+                        "2": [0, 1, 0],
+                        "3": [1, 1, 1]
+                    }
+                },
+                "name": "tf_op_layer_strided_slice",
+                "inbound_nodes": [[["keras_layer", 0, 1, {}]]]
+            },
+            {
+                "class_name": "Dense",
+                "config": {
+                    "name": "dense",
+                    "trainable": true,
+                    "dtype": "float32",
+                    "units": 1,
+                    "activation": "sigmoid",
+                    "use_bias": true,
+                    "kernel_initializer": {
+                        "class_name": "GlorotUniform",
+                        "config": { "seed": null }
+                    },
+                    "bias_initializer": { "class_name": "Zeros", "config": {} },
+                    "kernel_regularizer": null,
+                    "bias_regularizer": null,
+                    "activity_regularizer": null,
+                    "kernel_constraint": null,
+                    "bias_constraint": null
+                },
+                "name": "dense",
+                "inbound_nodes": [[["tf_op_layer_strided_slice", 0, 0, {}]]]
+            }
+        ],
+        "input_layers": [
+            ["input_word_ids", 0, 0],
+            ["input_mask", 0, 0],
+            ["segment_ids", 0, 0]
+        ],
+        "output_layers": [["dense", 0, 0]]
+    },
+    "keras_version": "2.4.0",
+    "backend": "tensorflow"
+}
