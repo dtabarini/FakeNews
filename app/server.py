@@ -65,4 +65,4 @@ print('training model')
 model.train('alldata.csv')
 if __name__ == '__main__':
 	print('running flask')
-	app.run(threaded=True, port=8000)
+	app.run(threaded=True, port=8010)

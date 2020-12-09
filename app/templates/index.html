@@ -6,7 +6,7 @@
         <title>Fake News Classifier</title>
         <link
             rel="icon"
-            href="{{ url_for('static', filename='icon.png') }}"
+            href="{{ url_for('static', filename='img/icon.png') }}"
             type="image/png"
         />
         <link
@@ -47,7 +47,7 @@
             ></textarea>
             <br />
             <select id="model">
-                <option value="logreg">LogisticRegressor (Better Score)</option>
+                <option value="logreg">LogisticRegressor (Best Score)</option>
                 <option value="linsvc">LinearSVC (More Consistent)</option>
             </select>
             <br />
@@ -57,6 +57,25 @@
             <br /><br />
             <div class="spacer"></div>
             <div id="output"></div>
+            <div id="footer">
+                <a
+                    target="_blank"
+                    href="https://medium.com/@araterink/25f65013b433"
+                    ><img
+                        src="img/medium.png"
+                        height="50"
+                        width="50"
+                        alt="Medium"
+                /></a>
+                <a target="_blank" href="https://github.com/dtabarini/FakeNews">
+                    <img
+                        src="img/github.png"
+                        height="50"
+                        width="50"
+                        alt="GitHub"
+                    />
+                </a>
+            </div>
         </div>
     </body>
 </html>

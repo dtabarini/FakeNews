@@ -5,7 +5,7 @@ $(document).ready((_) => {
         var model = `${$('#model').val()}`.trim();
         if (title != '' && text != '' && model != '') {
             $('#output').html(
-                `<img id="loading" src="loading.svg" />`
+                `<img id="loading" src="img/loading.svg" />`
             );
             setTimeout(_ => {
                 $.ajax({
